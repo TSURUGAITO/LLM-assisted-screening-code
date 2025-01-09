@@ -28,6 +28,7 @@ merged_df.rename(columns={'screening_turbo_renamed': 'screening_turbo', 'screeni
 
 # Define the function for final screening decision
 def create_final_screening_text(row):
+#This is the prompt we used in the LLM-assisted screening we conducted
     screening_text = (
         "You are tasked with reconciling the results of two prior screenings performed by GPT-4 models. "
         "Both models reviewed the same title and abstract of a study. Here are the results:\n\n"

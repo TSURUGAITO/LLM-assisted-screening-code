@@ -71,5 +71,26 @@ merged_df.rename(columns={'screening_turbo_renamed': 'screening_turbo', 'screeni
 # Create final screening text for GPT model
 merged_df['final_screening_text'] = merged_df.apply(create_final_screening_text, axis=1)
 
+# Set the GPT API key
+client = OpenAI(
+    # defaults to os.environ.get("OPENAI_API_KEY")
+   api_key="Your api_key",　# This is your OPENAI API KEY
+)
 
+# Apply GPT-4-turbo or GPT-4o for the final decision
+final_decisions = []
+for index, row in merged_df.iterrows():
+    response = client.chat.completions.create(
+        model="gpt-4-turbo",
+        messages=[{"role": "system", "content": row['final_screening_text']}]
+    )
+    decision = response.choices[0].message.content.strip().lower()
+    final_decisions.append(decision)
 
+# Add final decisions to the DataFrame
+merged_df['final_decision'] = final_decisions
+
+# Save the final decisions to an Excel file
+merged_df.to_excel(output_file, index=False)
+
+print(f"Final screening decisions saved to {output_file}")

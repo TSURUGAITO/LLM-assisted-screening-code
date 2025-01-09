@@ -1,0 +1,103 @@
+Copyright (c) [2024] [Takehiko Oami]
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+
+# python data_loader.py
+#!/usr/bin/env python
+# coding: utf-8
+
+import pandas as pd
+import os
+
+# Load data from an Excel file using Pandas
+MYDIR = "Your directory"　# This should be the path to your directory
+filename = os.path.join(MYDIR, 'file name')　# This is the Excel file you want to load
+
+df = pd.read_excel(filename, sheet_name="Sheet", engine='openpyxl')　# This is the sheet in Excel  you want to load
+
+# python screening_text_generator.py
+#!/usr/bin/env python
+# coding: utf-8
+
+# Define a function to create the 'screening' text
+def create_screening_text(row):
+
+#This is the prompt we used in the LLM-assisted screening we conducted
+    screening_text = (
+        "You are conducting a scoping review, focusing on a specific area of medical research. "
+        "Your task is to evaluate research studies and determine whether they should be included in your review. "
+        "To do this, each study must meet the following criteria:\n\n"
+        "Target Population: The study includes patients with cancer (more than or equal to 80% of the population) and delirium.\n"
+        "Concept: The study investigates nonpharmacological interventions of delirium.\n"
+        "Context: The study includes all context.\n"
+        "Study Design: The study includes all study designs.\n"
+        "However, you should exclude studies in the following cases:\n\n"
+        "The study does not meet all of the above eligibility criteria.\n"
+        "The study involves research on sedation and causative treatment, and those not written in Japanese or English.\n"
+        "After reading the title and abstract of a study, decide whether to include or exclude it based on these criteria. "
+        "When judging each domain, if there is uncertainty in the decision due to a lack of adequate information, please answer "
+        "with include in order to minimize the possibility of falsely excluding potentially relevant literature. "
+        "Please answer the question with include or exclude only.\n\n"
+    )
+
+    # Append the title
+    screening_text += f"Title: {row['title']}\n\n"
+    # Append the abstract if it exists
+    if not pd.isna(row['abstract']):
+        screening_text += f"Abstract: {row['abstract']}\n\n"
+    return screening_text
+
+# Apply the function to each row
+df['screening'] = df.apply(create_screening_text, axis=1)
+
+# Save the DataFrame to an Excel file
+output_path = os.path.join(MYDIR, 'file name')　# This is the Excel file you want to output
+df.to_excel(output_path, index=False)
+
+# python gpt_integration.py
+#!/usr/bin/env python
+# coding: utf-8
+
+# Execute the script to save the DataFrame to an Excel file
+from openai import OpenAI
+import openpyxl
+
+# Set the GPT-4 API key
+client = OpenAI(
+    # defaults to os.environ.get("OPENAI_API_KEY")
+   api_key="Your api_key",　# This is your OPENAI API KEY
+)
+
+# Read an Excel file
+workbook = openpyxl.load_workbook("Path to your file")
+sheet = workbook.active
+
+# Apply the range of the row and column
+start_row = "number"
+end_row = "number"
+question_column = "number"
+answer_column = "number"
+
+# Repeat the execution of the command 
+for row in range(start_row, end_row + 1):
+    question = sheet.cell(row=row, column=question_column).value
+
+    if question:
+        # Answer the question using the GPT-4 API
+        response = client.chat.completions.create(
+        model="gpt-4-turbo",　# This is the model of the LLM to be used.
+        messages=[{"role": "system", "content": question}]
+    )
+
+        answer = response.choices[0].message.content
+
+        # Write an answer next to the cell
+        sheet.cell(row=row, column=answer_column).value = answer
+
+# Save the edited Excel file
+workbook.save("Path to your file")
+
+

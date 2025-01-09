@@ -1,0 +1,74 @@
+# This code is for performing a re-screening using LLM-assisted screening, 
+  taking into account the differences in the judgments made by two LLM models in the initial screening results. 
+  It is used to conduct the screening again.
+
+# Import necessary libraries
+import pandas as pd
+import os
+from openai import OpenAI
+import openpyxl
+
+# Define paths
+MYDIR = "Your directory"
+input_file = os.path.join(MYDIR, 'file name')
+output_file = os.path.join(MYDIR, 'file name')
+
+# Load results from the two previous screenings
+results_turbo_file = os.path.join(MYDIR, 'file name')　# The file containing the judgment based on LLM model 1.
+results_gpt4o_file = os.path.join(MYDIR, 'file name')　# The file containing the judgment based on LLM model 2.
+
+turbo_df = pd.read_excel(results_turbo_file, engine='openpyxl')
+gpt4o_df = pd.read_excel(results_gpt4o_file, engine='openpyxl')
+
+# Merge the results
+turbo_df.rename(columns={'screening_turbo': 'screening_turbo_renamed'}, inplace=True)
+gpt4o_df.rename(columns={'screening_gpt4o': 'screening_gpt4o_renamed'}, inplace=True)
+merged_df = pd.merge(turbo_df, gpt4o_df, left_on='title', right_on='title', suffixes=('_turbo', '_gpt4o'))
+merged_df.rename(columns={'screening_turbo_renamed': 'screening_turbo', 'screening_gpt4o_renamed': 'screening_gpt4o'}, inplace=True)
+
+# Define the function for final screening decision
+def create_final_screening_text(row):
+    screening_text = (
+        "You are tasked with reconciling the results of two prior screenings performed by GPT-4 models. "
+        "Both models reviewed the same title and abstract of a study. Here are the results:\n\n"
+        f"Model GPT-4-turbo: {row['screening_turbo']}\n"
+        f"Model GPT-4o: {row['screening_gpt4o']}\n\n"
+        "The original criteria for inclusion are as follows:\n"
+        "1. Target Population: Includes patients with cancer (>=80%) and delirium.\n"
+        "2. Concept: Investigates nonpharmacological interventions of delirium.\n"
+        "3. Context: Includes all contexts.\n"
+        "4. Study Design: Includes RCTs, non-RCTs, and observational studies with control groups.\n"
+        "Exclusion criteria:\n"
+        "- Does not meet all eligibility criteria.\n"
+        "- Research on sedation and causative treatment.\n"
+        "- Not written in Japanese or English.\n\n"
+        "After considering the results of both models, decide whether the study should be included or excluded "
+        "based on the criteria provided above. If unsure, favor inclusion to avoid falsely excluding relevant studies.\n"
+        "Please answer with 'include' or 'exclude' only.\n\n"
+    )
+
+    # Add title and abstract
+    screening_text += f"Title: {row['title']}\n\n"
+    if 'abstract_turbo' in row and not pd.isna(row['abstract_turbo']):
+        screening_text += f"Abstract (Turbo): {row['abstract_turbo']}\n\n"
+    if 'abstract_gpt4o' in row and not pd.isna(row['abstract_gpt4o']):
+        screening_text += f"Abstract (GPT-4o): {row['abstract_gpt4o']}\n\n"
+
+    return screening_text
+
+# Fix merge process
+turbo_df.rename(columns={'screening_turbo': 'screening_turbo_renamed', 'abstract': 'abstract_turbo'}, inplace=True)
+gpt4o_df.rename(columns={'screening_gpt4o': 'screening_gpt4o_renamed', 'abstract': 'abstract_gpt4o'}, inplace=True)
+
+# Perform merge
+merged_df = pd.merge(turbo_df, gpt4o_df, left_on='title', right_on='title', suffixes=('_turbo', '_gpt4o'))
+
+# Fix column names
+merged_df.rename(columns={'screening_turbo_renamed': 'screening_turbo', 'screening_gpt4o_renamed': 'screening_gpt4o'}, inplace=True)
+
+
+# Create final screening text for GPT model
+merged_df['final_screening_text'] = merged_df.apply(create_final_screening_text, axis=1)
+
+
+

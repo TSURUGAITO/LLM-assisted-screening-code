@@ -81,7 +81,7 @@ client = OpenAI(
 final_decisions = []
 for index, row in merged_df.iterrows():
     response = client.chat.completions.create(
-        model="gpt-4-turbo",
+        model="gpt-4-turbo", # This is the model of the LLM to be used.
         messages=[{"role": "system", "content": row['final_screening_text']}]
     )
     decision = response.choices[0].message.content.strip().lower()

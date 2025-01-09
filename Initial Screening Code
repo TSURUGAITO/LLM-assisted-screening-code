@@ -65,7 +65,7 @@ df.to_excel(output_path, index=False)
 from openai import OpenAI
 import openpyxl
 
-# Set the GPT-4 API key
+# Set the GPT API key
 client = OpenAI(
     # defaults to os.environ.get("OPENAI_API_KEY")
    api_key="Your api_key",　# This is your OPENAI API KEY
